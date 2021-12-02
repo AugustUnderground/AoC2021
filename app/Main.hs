@@ -1,12 +1,13 @@
 module Main where
 
 import Lib
-import Data.Functor
 
 main :: IO ()
-main = do
-    readFile input01 >>= print . day01_2
+main = readFile "./resource/day02.txt" >>= print . day02_2
 
-    putStrLn "AOC 2021"
-  where 
-    input01 = "./resource/day01.txt"
+--main :: IO ()
+--main = do
+--    readFile input >>= print . day02
+--    putStrLn "AOC 2021"
+--  where 
+--    input = "./resource/day02_.txt"
