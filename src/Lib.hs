@@ -5,10 +5,13 @@ module Lib
     , day01_2
     , day02
     , day02_2
+    , day03
+    , day03_2
     ) where
 
 import Control.Applicative
-import Data.List (tails)
+import Data.List
+import Data.Char (digitToInt, intToDigit)
 
 intPut :: String -> [Int]
 intPut = map (\x -> (read x :: Int)) . lines 
@@ -53,3 +56,60 @@ day02_2' (_ ,_  , _ ) (_, _        ) = error "You screwed up AoC 2021 Day 2!"
 day02_2 :: String -> Int
 day02_2 = pos . foldl day02_2' (0,0,0) . mapPut
   where pos (x, y, a) = x * y
+
+toDec :: String -> Int
+toDec = foldl' (\a x -> a * 2 + digitToInt x) 0
+
+day03' :: [Int] -> Int
+day03' [zero,one] | zero >  one = 0
+                  | zero <  one = 1
+                  | zero == one = 1
+                  | otherwise  = error "You screwed up day 3!"
+day03' _ = error "You screwed up day 3!!"
+
+day03'' :: [Int] -> Int
+day03'' [zero,one] | zero < one = 0
+                   | zero > one = 1
+                   | otherwise  = error "You screwed up day 3!"
+day03'' _ = error "You screwed up day 3!"
+
+day03''' :: ([Int] -> Int) -> String -> Int
+day03''' fn = toDec . concatMap (show . fn . (map length . group . sort)) 
+            . transpose . lines
+
+gammaRate :: String -> Int
+gammaRate = day03''' day03'
+
+epsilonRate :: String -> Int
+epsilonRate = day03''' day03''
+
+day03 :: String -> Int
+day03 inp = gamma * epsilon
+  where gamma   = gammaRate inp
+        epsilon = epsilonRate inp
+
+length' :: [String] -> [Int]
+length' [zs,os] = [length zs, length os]
+length' [zos]   | nub zos == "1" = [0, length zos]
+                | nub zos == "0" = [length zos, 0]
+                | otherwise = error "You screwed up Day 3!"
+length' _ = error "You screwed up Day 3!!!!!"
+
+findMCB :: [String] -> Int
+findMCB = day03' . head . map (length' . group . sort) . transpose
+
+day03_2' :: Int -> [String] -> String
+day03_2' idx lb | length lb > 1 = let mcb = intToDigit . findMCB . map (drop idx) $ lb
+                                   in day03_2' (idx + 1) (filter (\b -> (b !! idx) == mcb) lb)
+                | otherwise = head lb
+
+day03_2'' :: Int -> [String] -> String
+day03_2'' idx lb | length lb > 1 = let mcb = intToDigit . findMCB . map (drop idx) $ lb
+                                    in day03_2'' (idx + 1) (filter (\b -> (b !! idx) /= mcb) lb)
+                 | otherwise = head lb
+
+day03_2 :: String -> Int
+day03_2 inp = ogr * csr
+  where ogr = toDec . day03_2'  0 . lines $ inp
+        csr = toDec . day03_2'' 0 . lines $ inp
+
