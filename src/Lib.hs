@@ -7,11 +7,15 @@ module Lib
     , day02_2
     , day03
     , day03_2
+    , day04
     ) where
 
 import Control.Applicative
 import Data.List
+import Data.List.Split
 import Data.Char (digitToInt, intToDigit)
+import Data.Maybe (isNothing, fromJust)
+import qualified Data.Set as Set
 
 intPut :: String -> [Int]
 intPut = map (\x -> (read x :: Int)) . lines 
@@ -113,3 +117,34 @@ day03_2 inp = ogr * csr
   where ogr = toDec . day03_2'  0 . lines $ inp
         csr = toDec . day03_2'' 0 . lines $ inp
 
+bingo' :: [Int] -> [[Int]] -> Int
+bingo' draw board = u * d
+  where d' = Set.fromList draw
+        b' = Set.fromList . concat $ board
+        u  = sum . Set.toList $ Set.difference b' d'
+        d  = last draw
+
+bingo :: [Int] -> [[Int]] -> Maybe Int
+bingo []   _     = Nothing
+bingo draw board = if w || w' 
+                      then Just (bingo' draw board)
+                      else Nothing
+  where b  = map Set.fromList board
+        b' = map Set.fromList . transpose $ board
+        d  = Set.fromList draw
+        w  = any (`Set.isSubsetOf` d) b
+        w' = any (`Set.isSubsetOf` d) b'
+
+day04 :: String -> Int
+day04 inp = win'
+  where draws   = dropWhile null . inits . map read . splitOn "," 
+                . head . lines $ inp :: [[Int]]
+        boards  = chunksOf 5 . map (map read . words) 
+                . filter (/= "") . tail . lines $ inp :: [[[Int]]]
+        win = fromJust . head . dropWhile isNothing 
+            . concatMap (\d -> map (bingo d) boards) $ draws
+        lastWinIdx = head . head . dropWhile (\x -> length x > 1) 
+                   . map (elemIndices Nothing) . dropWhile (all isNothing) 
+                   . map (\d -> map (bingo d) boards) $ draws
+        win' = fromJust . (!!lastWinIdx) . head . dropWhile (any isNothing) 
+             . map (\d -> map (bingo d) boards) $ draws
