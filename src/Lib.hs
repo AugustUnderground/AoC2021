@@ -8,6 +8,7 @@ module Lib
     , day03
     , day03_2
     , day04
+    , day05
     ) where
 
 import Control.Applicative
@@ -15,6 +16,7 @@ import Data.List
 import Data.List.Split
 import Data.Char (digitToInt, intToDigit)
 import Data.Maybe (isNothing, fromJust)
+import Data.Tuple (swap)
 import qualified Data.Set as Set
 
 intPut :: String -> [Int]
@@ -148,3 +150,32 @@ day04 inp = win'
                    . map (\d -> map (bingo d) boards) $ draws
         win' = fromJust . (!!lastWinIdx) . head . dropWhile (any isNothing) 
              . map (\d -> map (bingo d) boards) $ draws
+
+idxList :: [[Int]] -> [(Int, Int)]
+idxList [[x1,y1], [x2,y2]] = [ (x, y) 
+                             | let (x',x'') = if x1 < x2 then (x1,x2) else (x2,x1)
+                             , let (y',y'') = if y1 < y2 then (y1,y2) else (y2,y1)
+                             , x <- [x' .. x'']
+                             , y <- [y' .. y'']]
+idxList _ = error "You Screwed up Day 5!"
+
+idxList' :: [[Int]] -> [(Int, Int)]
+idxList' [[x1,y1], [x2,y2]] = zip xs ys
+  where xs = if x1 < x2 then [x1 .. x2]
+                        else [x1, (x1 - 1) .. x2]
+        ys = if y1 < y2 then [y1 .. y2]
+                        else [y1, (y1 - 1) .. y2]
+idxList' _ = error "You Screwed up Day 5!"
+
+day05 :: String -> Int
+day05 inp = overlap'
+  where 
+    coords = map (map (map read . splitOn ",") . splitOn "->") . lines 
+           $ inp :: [[[Int]]]
+    grid = filter (\[a, b] -> a!!0 == b!!0 || a!!1 == b!!1) coords
+    points = concatMap idxList grid
+    overLap' (x1, y1) (x2, y2) = x1 == x2 && y1 == y2
+    overlap = length . filter (>1) . map length . groupBy overLap' . sort $ points
+    diag = filter (\[a, b] -> a!!0 /= b!!0 && a!!1 /= b!!1) coords
+    points' = concatMap idxList' diag
+    overlap' = length . filter (>1) . map length . groupBy overLap' . sort $ points ++ points'
