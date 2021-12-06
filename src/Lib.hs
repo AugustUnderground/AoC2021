@@ -9,6 +9,7 @@ module Lib
     , day03_2
     , day04
     , day05
+    , day06
     ) where
 
 import Control.Applicative
@@ -17,6 +18,7 @@ import Data.List.Split
 import Data.Char (digitToInt, intToDigit)
 import Data.Maybe (isNothing, fromJust)
 import Data.Tuple (swap)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 intPut :: String -> [Int]
@@ -179,3 +181,23 @@ day05 inp = overlap'
     diag = filter (\[a, b] -> a!!0 /= b!!0 && a!!1 /= b!!1) coords
     points' = concatMap idxList' diag
     overlap' = length . filter (>1) . map length . groupBy overLap' . sort $ points ++ points'
+
+population :: Int -> [Int] -> [Int]
+population 0   states = states
+population day states = population (day - 1) newStates
+  where 
+    resetStates = head states
+    shiftStates = tail states ++ [0]
+    newStates   = [ if (s == 8) || (s == 6) 
+                       then f + resetStates 
+                       else f 
+                  | (s, f) <- zip [0 .. 8] shiftStates ]
+
+day06 :: String -> Int
+day06 inp = sum fish'
+  where
+    days = 256
+    fish = map read . splitOn "," . head . lines $ inp :: [Int]
+    countStates s = length . filter (s ==)
+    states = map (`countStates` fish) [0 .. 8]
+    fish' = population days states
