@@ -10,6 +10,7 @@ module Lib
     , day04
     , day05
     , day06
+    , day07
     ) where
 
 import Control.Applicative
@@ -201,3 +202,19 @@ day06 inp = sum fish'
     countStates s = length . filter (s ==)
     states = map (`countStates` fish) [0 .. 8]
     fish' = population days states
+
+fuel :: Int -> Int -> Int
+fuel a b = abs $ a - b
+
+fuel' :: Int -> Int -> Int
+fuel' a b = sum [0 .. abs $ a - b]
+
+day07 :: String -> Int
+day07 inp = minimum cost
+  where
+    crabs = map read . splitOn "," . head . lines $ inp :: [Int]
+    min'  = minimum crabs
+    max'  = maximum crabs
+    range = [min' .. max']
+    cost  = [ sum . map (fuel' r) $ crabs | r <- range ]
+    --pos   = fromJust $ elemIndex (minimum cost) cost
