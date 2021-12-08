@@ -11,13 +11,14 @@ module Lib
     , day05
     , day06
     , day07
+    , day08
     ) where
 
 import Control.Applicative
 import Data.List
 import Data.List.Split
 import Data.Char (digitToInt, intToDigit)
-import Data.Maybe (isNothing, fromJust)
+import Data.Maybe (mapMaybe, isNothing, fromJust)
 import Data.Tuple (swap)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -218,3 +219,32 @@ day07 inp = minimum cost
     range = [min' .. max']
     cost  = [ sum . map (fuel' r) $ crabs | r <- range ]
     --pos   = fromJust $ elemIndex (minimum cost) cost
+
+toTuple :: [a] -> (a,a)
+toTuple [x,y] = (x,y)
+toTuple _ = error "Screwed up day 8!"
+
+decode :: ([String], [String]) -> Int
+decode (input,output) = read . concatMap (show . fromJust . (`elemIndex` ds)) $ os
+  where
+    is    = map (Set.fromList . sort) input
+    os    = map (Set.fromList . sort) output
+    one   = head . filter ((==2) . Set.size) $ is
+    four  = head . filter ((==4) . Set.size) $ is
+    seven = head . filter ((==3) . Set.size) $ is
+    eight = head . filter ((==7) . Set.size) $ is
+    nine  = head . filter (\n -> Set.size n == 6 && (four `Set.isSubsetOf` n)) $ is
+    zero  = head . filter (\z -> Set.size z == 6 && (seven `Set.isSubsetOf` z) && (z /= nine)) $ is
+    six   = head . filter (\s -> Set.size s == 6 && notElem s [zero, nine]) $ is
+    five  = head . filter (\t -> Set.size t == 5 && (t `Set.isSubsetOf` six)) $ is
+    three = head . filter (\t -> Set.size t == 5 && (one `Set.isSubsetOf` t)) $ is
+    ds'   = [one,three,four,five,six,seven,eight,nine,zero]
+    two   = head . filter (`notElem` ds') $ is
+    ds    = [zero,one,two,three,four,five,six,seven,eight,nine]
+
+day08 :: String -> Int
+day08 = sum . map (decode . toTuple . map words . splitOn "|") . lines
+    --uniqueLengths = [2,3,4,7]
+    --uniqueDigits  = sum . map (length . filter (`elem` uniqueLengths) 
+    --                                  . map length . words . (!!1) . splitOn "|") 
+    --              . lines $ inp
