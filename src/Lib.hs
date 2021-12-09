@@ -12,13 +12,14 @@ module Lib
     , day06
     , day07
     , day08
+    , day09
     ) where
 
 import Control.Applicative
 import Data.List
 import Data.List.Split
 import Data.Char (digitToInt, intToDigit)
-import Data.Maybe (mapMaybe, isNothing, fromJust)
+import Data.Maybe (mapMaybe, catMaybes, isNothing, isJust, fromJust)
 import Data.Tuple (swap)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -248,3 +249,57 @@ day08 = sum . map (decode . toTuple . map words . splitOn "|") . lines
     --uniqueDigits  = sum . map (length . filter (`elem` uniqueLengths) 
     --                                  . map length . words . (!!1) . splitOn "|") 
     --              . lines $ inp
+
+adjacentPoints :: [[Int]] -> Int -> Int -> [(Int, Int)]
+adjacentPoints grid row col 
+    | (row + 1) == nRows && (col + 1) == nCols = [(row - 1, col), (row, col - 1)]
+    | row == 0           && col == 0           = [(row + 1, col), (row, col + 1)]
+    | row == 0           && (col + 1) == nCols = [(row + 1, col), (row, col - 1)]
+    | (row + 1) == nRows && col == 0           = [(row - 1, col), (row, col + 1)]
+    | row == 0           && col > 0 && (col + 1) < nCols = [(row, col - 1), (row, col + 1), (row + 1, col)]
+    | (row + 1 == nRows) && col > 0 && (col + 1) < nCols = [(row, col - 1), (row, col + 1), (row - 1, col)]
+    | col == 0           && row > 0 && (row + 1) < nRows = [(row - 1, col), (row + 1, col), (row, col + 1)]
+    | (col + 1 == nCols) && row > 0 && (row + 1) < nRows = [(row - 1, col), (row + 1, col), (row, col - 1)]
+    | otherwise =[(row + 1, col), (row - 1, col), (row, col + 1), (row, col - 1)]
+  where
+    nRows = length grid
+    nCols = length . head $ grid
+
+localMinimum :: [[Int]] -> (Int, Int) -> [(Int, Int)] -> Maybe Int
+localMinimum grid (row, col) neighbours = if all (> value) adj
+                                               then Just value
+                                               else Nothing
+  where
+    get r c = grid !! r !! c
+    value   = get row col
+    adj     = map (uncurry get) neighbours
+
+localMinimum' :: [[Int]] -> (Int, Int) -> [(Int, Int)] -> (Maybe Int, (Int, Int))
+localMinimum' grid (row, col) neighbours = if isNothing lm
+                                              then (Nothing, (-1,-1))
+                                              else (lm, (row, col))
+    where lm = localMinimum grid (row, col) neighbours
+
+basinPoints :: [[Int]] -> Int -> [(Int, Int)] -> [(Int, Int)] -> Int
+basinPoints _    bs  _         []           = bs
+basinPoints grid bs rcs' ((row, col) : rcs) = basinPoints grid (bs + 1)
+                                                          (nub ((row,col) : rcs'))
+                                                          (nub (rcs ++ adj))
+  where
+    get r c = grid !! r !! c
+    adj     = filter (\(r,c) -> get r c < 9 && notElem (r,c) rcs') $ adjacentPoints grid row col
+
+day09 :: String -> Int
+day09 inp = mins'
+  where
+    grid = map (map digitToInt) . lines $ inp
+    nRows = length grid
+    nCols = length . head $ grid
+    --mins = catMaybes [ localMinimum grid (r,c) (adjacentPoints grid r c) 
+    --                 | r <- [0 .. nRows - 1] , c <- [0 .. nCols - 1] ]
+    --mins' = (+ length mins) . sum $ mins
+    mins = map snd . filter (\(m, _ ) -> isJust m) 
+         $ [ localMinimum' grid (r,c) (adjacentPoints grid r c) 
+           | r <- [0 .. nRows - 1] , c <- [0 .. nCols - 1] ]
+    basins = map (\m -> basinPoints grid 0 [] [m]) mins
+    mins' = product . take 3 . reverse . sort $ basins
