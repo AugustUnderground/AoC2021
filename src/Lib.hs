@@ -13,6 +13,7 @@ module Lib
     , day07
     , day08
     , day09
+    , day11
     ) where
 
 import Control.Applicative
@@ -303,3 +304,67 @@ day09 inp = mins'
            | r <- [0 .. nRows - 1] , c <- [0 .. nCols - 1] ]
     basins = map (\m -> basinPoints grid 0 [] [m]) mins
     mins' = product . take 3 . reverse . sort $ basins
+
+adjacentOctos :: (Int, Int) -> [(Int, Int)]
+adjacentOctos (r,c) = [(r',c') | r' <- [ r - 1 .. r + 1 ], c' <- [ c - 1 .. c + 1]]
+
+count :: Eq a => a -> [a] -> Int
+count e l = length $ elemIndices e l
+
+octoCharge :: [(Int, Int)] -> [[Int]] -> (Int, Int) -> Int
+octoCharge coords grid (r,c) | g >= 10   = -(g + 1)
+                             | g < 0     = 0
+                             | otherwise = count (r,c) coords
+  where
+    g = grid !! r !! c
+
+octoStep :: Int -> Int -> [[Int]] -> [(Int, Int)] -> Int
+octoStep 0 flashes grid coords = flashes
+octoStep steps flashes grid [] = octoStep (steps - 1) flashes grid' coords'
+  where
+    nRows   = length grid
+    nCols   = length . head $ grid
+    coords' = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    grid'   = map (map (\g -> if g >= 10 || g < 0 then 0 else g)) grid
+octoStep steps flashes grid coords = octoStep steps flashes' grid' coords'
+  where
+    nRows       = length grid
+    nCols       = length . head $ grid
+    wholeGrid   = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    increment   = chunksOf nRows . map (octoCharge coords grid) $ wholeGrid
+    grid'       = zipWith (zipWith (+)) grid increment
+    flashCoords = concatMap (\(r,c) -> zip [r,r..] c) . filter (not . null . snd)
+                $ zip [ 0 .. length grid' ] (map (findIndices (>9)) grid')
+    flashes'    = flashes + length flashCoords
+    coords'     = filter (`notElem` flashCoords)
+                . filter (\(r,c) -> r >= 0 && r < nRows && c >= 0 && c < nCols)
+                . concatMap adjacentOctos $ flashCoords
+
+octoStep' :: Int -> Int -> [[Int]] -> [(Int, Int)] -> Int
+octoStep' steps flashes grid [] = octoStep' (steps + 1) flashes grid' coords'
+  where
+    nRows   = length grid
+    nCols   = length . head $ grid
+    coords' = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    grid'   = map (map (\g -> if g >= 10 || g < 0 then 0 else g)) grid
+octoStep' steps flashes grid coords | all (all (==0)) grid = steps
+                                    | otherwise = octoStep' steps flashes' grid' coords'
+  where
+    nRows       = length grid
+    nCols       = length . head $ grid
+    wholeGrid   = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    increment   = chunksOf nRows . map (octoCharge coords grid) $ wholeGrid
+    grid'       = zipWith (zipWith (+)) grid increment
+    flashCoords = concatMap (\(r,c) -> zip [r,r..] c) . filter (not . null . snd)
+                $ zip [ 0 .. length grid' ] (map (findIndices (>9)) grid')
+    flashes'    = flashes + length flashCoords
+    coords'     = filter (`notElem` flashCoords)
+                . filter (\(r,c) -> r >= 0 && r < nRows && c >= 0 && c < nCols)
+                . concatMap adjacentOctos $ flashCoords
+
+day11 :: String -> Int
+day11 inp = puzzle2
+  where
+    octoGrid = map (map digitToInt) . lines $ inp
+    puzzle1 = octoStep 196 0 octoGrid []
+    puzzle2 = octoStep' 0 0 octoGrid [] - 1
