@@ -14,12 +14,14 @@ module Lib
     , day08
     , day09
     , day11
+    , day12
     ) where
 
 import Control.Applicative
+import Debug.Trace
 import Data.List
 import Data.List.Split
-import Data.Char (digitToInt, intToDigit)
+import Data.Char (digitToInt, intToDigit, isUpper, isLower)
 import Data.Maybe (mapMaybe, catMaybes, isNothing, isJust, fromJust)
 import Data.Tuple (swap)
 import qualified Data.Map as Map
@@ -368,3 +370,41 @@ day11 inp = puzzle2
     octoGrid = map (map digitToInt) . lines $ inp
     puzzle1 = octoStep 196 0 octoGrid []
     puzzle2 = octoStep' 0 0 octoGrid [] - 1
+
+walk :: Map.Map String [String] -> [String] -> [String] -> [[String]] -> String -> [[String]]
+walk graph visited path paths "end" = filter (not . null) $ ("end" : path) : paths
+walk graph visited path paths node | null nodes = filter (not . null) paths
+                                   | otherwise = concatMap (walk graph visited' path' paths) nodes
+  where nodes = filter (`notElem` visited) . fromJust $ Map.lookup node graph
+        path' = node : path
+        visited' = if isLower . head $ node
+                      then node : visited
+                      else visited
+
+nodeOptions :: [String] -> [String] -> [String]
+nodeOptions path children = bigCaves ++ smallCaves
+  where 
+     children' = filter (/= "start") children
+     bigCaves  = filter (isUpper . head) children'
+     smallCaves' = filter (isLower . head) children'
+     noTwice = not . any (>1) . map (\c -> count c path) $ smallCaves'
+     smallCaves = filter (\c -> c == "end" || noTwice || c `notElem` path) smallCaves'
+
+walk' :: Map.Map String [String] -> [String] -> [[String]] -> String -> [[String]]
+walk' graph path paths "end" = filter (not . null) $ ("end" : path) : paths
+walk' graph path paths node | null nodes = filter (not . null) paths
+                            | otherwise = concatMap (walk' graph path' paths) nodes
+  where children = fromJust $ Map.lookup node graph
+        path' = node : path
+        nodes = nodeOptions path' children
+
+day12 :: String -> Int
+day12 inp = paths' -- length paths
+  where
+    edges = concatMap ((\[a,b] -> [(a,[b]), (b,[a])]) . splitOn "-") . lines $ inp
+    graph = Map.fromListWith (++) edges
+    paths = walk' graph [] [[]] "start"
+    paths' = length . filter (<2) . map (length . findIndices (>=2) 
+           . map length . group . sort 
+           . (filter (\n -> n /= "start" && n /= "end" && (isLower . head $ n)))) 
+           $ paths
