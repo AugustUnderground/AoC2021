@@ -13,12 +13,13 @@ module Lib
     , day07
     , day08
     , day09
+    , day10
     ) where
 
 import Control.Applicative
 import Data.List
 import Data.List.Split
-import Data.Char (digitToInt, intToDigit)
+import Data.Char (digitToInt, intToDigit, isSpace, isLetter)
 import Data.Maybe (mapMaybe, catMaybes, isNothing, isJust, fromJust)
 import Data.Tuple (swap)
 import qualified Data.Map as Map
@@ -303,3 +304,59 @@ day09 inp = mins'
            | r <- [0 .. nRows - 1] , c <- [0 .. nCols - 1] ]
     basins = map (\m -> basinPoints grid 0 [] [m]) mins
     mins' = product . take 3 . reverse . sort $ basins
+
+errorScore :: Char -> Int
+errorScore ')' = 3
+errorScore ']' = 57
+errorScore '}' = 1197
+errorScore '>' = 25137
+errorScore  _  = 0
+
+closingPoints :: Char -> Int
+closingPoints ')' = 1
+closingPoints ']' = 2
+closingPoints '}' = 3
+closingPoints '>' = 4
+closingPoints  _  = 0
+
+isOpening :: Char -> Bool
+isOpening = flip elem "([{<"
+
+isClosing :: Char -> Bool
+isClosing = flip elem ">}])"
+
+close :: Char -> Char
+close '(' = ')'
+close '[' = ']'
+close '{' = '}'
+close '<' = '>'
+close  _  = ' '
+
+checkLine :: String -> String -> Char
+checkLine c l | null l = ' '
+              | null c && isOpening o = checkLine [close o] (tail l) 
+              | null c && isClosing o = o
+              | isOpening o = checkLine (close o : c) (tail l)
+              | isClosing o && (o == head c) = checkLine (tail c) (tail l)
+              | otherwise = o
+  where
+    o = head l
+
+completeLine :: String -> String -> String
+completeLine c l | null l = c
+                 | null c && isOpening o = completeLine [close o] (tail l) 
+                 | null c && isClosing o = ""
+                 | isOpening o = completeLine (close o : c) (tail l)
+                 | isClosing o && (o == head c) = completeLine (tail c) (tail l)
+                 | otherwise = ""
+  where
+    o = head l
+
+day10 :: String -> Int
+day10 inp = points
+  where
+    score = sum . map errorScore . filter isClosing . map (checkLine "") 
+          . lines $ inp
+    points' = filter (>0) . map (foldl (\a p -> a * 5 + p) 0 
+            . map closingPoints . completeLine "") . lines $ inp
+    points = sort points' !! (length points' `div` 2)
