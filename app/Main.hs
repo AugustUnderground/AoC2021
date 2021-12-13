@@ -3,7 +3,7 @@ module Main where
 import Lib
 
 main :: IO ()
-main = readFile "./resource/day10.txt" >>= print . day10
+main = readFile "./resource/day12.txt" >>= print . day12
 
 --main :: IO ()
 --main = do
@@ -11,4 +11,4 @@ main = readFile "./resource/day10.txt" >>= print . day10
 --    inp <- readFile input
 --    putStrLn "AOC 2021"
 --  where 
---    input = "./resource/day10_.txt"
+--    input = "./resource/day12_.txt"

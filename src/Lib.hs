@@ -14,12 +14,15 @@ module Lib
     , day08
     , day09
     , day10
+    , day11
+    , day12
     ) where
 
 import Control.Applicative
+import Debug.Trace
 import Data.List
 import Data.List.Split
-import Data.Char (digitToInt, intToDigit, isSpace, isLetter)
+import Data.Char (digitToInt, intToDigit, isUpper, isLower, isSpace, isLetter)
 import Data.Maybe (mapMaybe, catMaybes, isNothing, isJust, fromJust)
 import Data.Tuple (swap)
 import qualified Data.Map as Map
@@ -360,3 +363,105 @@ day10 inp = points
     points' = filter (>0) . map (foldl (\a p -> a * 5 + p) 0 
             . map closingPoints . completeLine "") . lines $ inp
     points = sort points' !! (length points' `div` 2)
+
+adjacentOctos :: (Int, Int) -> [(Int, Int)]
+adjacentOctos (r,c) = [(r',c') | r' <- [ r - 1 .. r + 1 ], c' <- [ c - 1 .. c + 1]]
+
+count :: Eq a => a -> [a] -> Int
+count e l = length $ elemIndices e l
+
+octoCharge :: [(Int, Int)] -> [[Int]] -> (Int, Int) -> Int
+octoCharge coords grid (r,c) | g >= 10   = -(g + 1)
+                             | g < 0     = 0
+                             | otherwise = count (r,c) coords
+  where
+    g = grid !! r !! c
+
+octoStep :: Int -> Int -> [[Int]] -> [(Int, Int)] -> Int
+octoStep 0 flashes grid coords = flashes
+octoStep steps flashes grid [] = octoStep (steps - 1) flashes grid' coords'
+  where
+    nRows   = length grid
+    nCols   = length . head $ grid
+    coords' = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    grid'   = map (map (\g -> if g >= 10 || g < 0 then 0 else g)) grid
+octoStep steps flashes grid coords = octoStep steps flashes' grid' coords'
+  where
+    nRows       = length grid
+    nCols       = length . head $ grid
+    wholeGrid   = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    increment   = chunksOf nRows . map (octoCharge coords grid) $ wholeGrid
+    grid'       = zipWith (zipWith (+)) grid increment
+    flashCoords = concatMap (\(r,c) -> zip [r,r..] c) . filter (not . null . snd)
+                $ zip [ 0 .. length grid' ] (map (findIndices (>9)) grid')
+    flashes'    = flashes + length flashCoords
+    coords'     = filter (`notElem` flashCoords)
+                . filter (\(r,c) -> r >= 0 && r < nRows && c >= 0 && c < nCols)
+                . concatMap adjacentOctos $ flashCoords
+
+octoStep' :: Int -> Int -> [[Int]] -> [(Int, Int)] -> Int
+octoStep' steps flashes grid [] = octoStep' (steps + 1) flashes grid' coords'
+  where
+    nRows   = length grid
+    nCols   = length . head $ grid
+    coords' = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    grid'   = map (map (\g -> if g >= 10 || g < 0 then 0 else g)) grid
+octoStep' steps flashes grid coords | all (all (==0)) grid = steps
+                                    | otherwise = octoStep' steps flashes' grid' coords'
+  where
+    nRows       = length grid
+    nCols       = length . head $ grid
+    wholeGrid   = [(r,c) | r <- [0 .. nRows - 1], c <- [0 .. nCols - 1]]
+    increment   = chunksOf nRows . map (octoCharge coords grid) $ wholeGrid
+    grid'       = zipWith (zipWith (+)) grid increment
+    flashCoords = concatMap (\(r,c) -> zip [r,r..] c) . filter (not . null . snd)
+                $ zip [ 0 .. length grid' ] (map (findIndices (>9)) grid')
+    flashes'    = flashes + length flashCoords
+    coords'     = filter (`notElem` flashCoords)
+                . filter (\(r,c) -> r >= 0 && r < nRows && c >= 0 && c < nCols)
+                . concatMap adjacentOctos $ flashCoords
+
+day11 :: String -> Int
+day11 inp = puzzle2
+  where
+    octoGrid = map (map digitToInt) . lines $ inp
+    puzzle1 = octoStep 196 0 octoGrid []
+    puzzle2 = octoStep' 0 0 octoGrid [] - 1
+
+walk :: Map.Map String [String] -> [String] -> [String] -> [[String]] -> String -> [[String]]
+walk graph visited path paths "end" = filter (not . null) $ ("end" : path) : paths
+walk graph visited path paths node | null nodes = filter (not . null) paths
+                                   | otherwise = concatMap (walk graph visited' path' paths) nodes
+  where nodes = filter (`notElem` visited) . fromJust $ Map.lookup node graph
+        path' = node : path
+        visited' = if isLower . head $ node
+                      then node : visited
+                      else visited
+
+nodeOptions :: [String] -> [String] -> [String]
+nodeOptions path children = bigCaves ++ smallCaves
+  where 
+     children' = filter (/= "start") children
+     bigCaves  = filter (isUpper . head) children'
+     smallCaves' = filter (isLower . head) children'
+     noTwice = not . any (>1) . map (\c -> count c path) $ smallCaves'
+     smallCaves = filter (\c -> c == "end" || noTwice || c `notElem` path) smallCaves'
+
+walk' :: Map.Map String [String] -> [String] -> [[String]] -> String -> [[String]]
+walk' graph path paths "end" = filter (not . null) $ ("end" : path) : paths
+walk' graph path paths node | null nodes = filter (not . null) paths
+                            | otherwise = concatMap (walk' graph path' paths) nodes
+  where children = fromJust $ Map.lookup node graph
+        path' = node : path
+        nodes = nodeOptions path' children
+
+day12 :: String -> Int
+day12 inp = paths' -- length paths
+  where
+    edges = concatMap ((\[a,b] -> [(a,[b]), (b,[a])]) . splitOn "-") . lines $ inp
+    graph = Map.fromListWith (++) edges
+    paths = walk' graph [] [[]] "start"
+    paths' = length . filter (<2) . map (length . findIndices (>=2) 
+           . map length . group . sort 
+           . (filter (\n -> n /= "start" && n /= "end" && (isLower . head $ n)))) 
+           $ paths
