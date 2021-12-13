@@ -16,13 +16,14 @@ module Lib
     , day10
     , day11
     , day12
+    , day13
     ) where
 
 import Control.Applicative
 import Debug.Trace
 import Data.List
 import Data.List.Split
-import Data.Char (digitToInt, intToDigit, isUpper, isLower, isSpace, isLetter)
+import Data.Char (digitToInt, intToDigit, isUpper, isLower, isSpace, isLetter, isDigit)
 import Data.Maybe (mapMaybe, catMaybes, isNothing, isJust, fromJust)
 import Data.Tuple (swap)
 import qualified Data.Map as Map
@@ -465,3 +466,35 @@ day12 inp = paths' -- length paths
            . map length . group . sort 
            . (filter (\n -> n /= "start" && n /= "end" && (isLower . head $ n)))) 
            $ paths
+
+fold :: [(Int, Int)] -> (String, Int) -> [(Int, Int)]
+fold points ("y", line) = nub (pointsAbove ++ foldedPoints)
+  where
+    pointsAbove  = filter ((<line) . snd) points
+    pointsBelow  = filter ((>line) . snd) points
+    foldedPoints = map (\(x,y) -> (x, line - (y - line))) pointsBelow
+fold points ("x", line) = nub (pointsLeft ++ foldedPoints)
+  where
+    pointsLeft  = filter ((<line) . fst) points
+    pointsRight = filter ((>line) . fst) points
+    foldedPoints = map (\(x,y) -> (line - (x - line), y)) pointsRight
+fold points     _       = points
+
+addPoint :: String -> Int -> String
+addPoint line i = take i line ++ "#" ++ drop (i+1) line
+
+day13 :: String -> Int
+day13 inp = visible
+  where
+    manual = lines inp
+    (points',instr') = (\(p,i) -> (p, tail i)) . splitAt (fromJust . elemIndex "" $ manual) $ manual
+    points = map ((\[x,y] -> (x,y)) . map read . splitOn ",") points' :: [(Int,Int)]
+    instr = map ((\[x,y] -> (x, read y)) . splitOn "=" . last . words) instr' :: [(String, Int)]
+    visible = length . fold points . head $ instr
+    finalPoints = foldl fold points instr
+    pointsPerLine = groupBy (\p1 p2 -> snd p1 == snd p2) . map swap . sort . map swap $ finalPoints
+    numCols = (+1) . maximum . map fst $ finalPoints
+    numRows = (+1) . maximum . map snd $ finalPoints
+    code = map (foldl (\l (p,_) -> addPoint l p) (replicate numCols ' ')) pointsPerLine
+
+
