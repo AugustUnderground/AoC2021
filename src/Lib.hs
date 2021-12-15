@@ -17,6 +17,7 @@ module Lib
     , day11
     , day12
     , day13
+    , day14
     ) where
 
 import Control.Applicative
@@ -497,4 +498,61 @@ day13 inp = visible
     numRows = (+1) . maximum . map snd $ finalPoints
     code = map (foldl (\l (p,_) -> addPoint l p) (replicate numCols ' ')) pointsPerLine
 
+polym :: Map.Map String Char -> [Char] -> [Char]
+polym rules ""       = ""
+polym rules [b]      = [b]
+polym rules (a : b : ps) = a : c : polym rules (b:ps)
+  where
+    c = fromJust $ Map.lookup [a,b] rules
 
+polymToPairs :: String -> [String]
+polymToPairs [b] = []
+polymToPairs (a:b:ps) = [a,b] : (polymToPairs (b:ps))
+
+polyPatterns :: Map.Map String Char -> String -> [String]
+polyPatterns rules [a,b] = [[a,c], [c,b]]
+  where
+    c = fromJust $ Map.lookup [a,b] rules
+
+polymStep :: Map.Map String Char -> Map.Map String Int -> Map.Map Char Int 
+          -> (Map.Map String Int, Map.Map Char Int)
+polymStep rules poly occur = (poly', occur')
+  where
+    occurs = concatMap (\(p,o) -> replicate o p) . Map.toList . Map.filter (>0) $ poly
+    occur' = foldl (flip (Map.adjust (+1))) occur $ map (\o -> fromJust 
+           $ Map.lookup o rules) occurs
+    updateOccurs = concatMap (polyPatterns rules) occurs
+    poly' = foldl (flip (Map.adjust (+ 1))) 
+                  (Map.fromList $ zip (Map.keys rules) [0,0 .. ]) 
+                  updateOccurs 
+
+polymStep' :: Int -> Map.Map String Char -> Map.Map String Int -> Map.Map Char Int 
+          -> (Map.Map String Int, Map.Map Char Int)
+polymStep' 0  rules poly occur = (poly, occur)
+polymStep' i rules poly occur = polymStep' (i-1) rules poly' occur'
+  where
+    ply = Map.filter (>0) poly
+    occur' = foldl (\o (k,v) -> Map.adjust (+v) k o) occur 
+           . map (\(p,o) -> (fromJust $ Map.lookup p rules, o)) 
+           . Map.toList $ ply
+    poly' = Map.fromListWith (+) . concatMap (\(k,v) -> zip (polyPatterns rules k) [v,v ..]) . Map.toList $ ply
+
+day14 :: String -> Int
+day14 inp = maximum ocr - minimum ocr
+  where
+    inp' = lines inp
+    template' = head inp'
+    template = polymToPairs template'
+    rules = Map.fromList . map ((\[p,r] -> (p,head r)) . splitOn " -> ") $ drop 2 inp'
+    temp = Map.mapWithKey (\p o -> count p template) 
+         $ Map.fromList $ zip (Map.keys rules) [0,0 .. ]
+    occur = Map.mapWithKey (\p o -> count p template') . Map.fromList 
+          $ zip (nub . concat . Map.keys $ rules) [0,0 .. ]
+    nSteps = 40
+    (polyms, occurs) = polymStep' nSteps rules temp occur
+    ocr = map snd . Map.toList $ occurs
+
+    --run = polym rules template'
+    --polymer = foldl (\temp _ -> polym rules temp) template' [1 .. nSteps]
+    -- occur = map length . group . sort $ polymer
+    -- naive = maximum occur - minimum occur
