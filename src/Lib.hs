@@ -18,6 +18,7 @@ module Lib
     , day12
     , day13
     , day14
+    , day15
     ) where
 
 import Control.Applicative
@@ -27,6 +28,7 @@ import Data.List.Split
 import Data.Char (digitToInt, intToDigit, isUpper, isLower, isSpace, isLetter, isDigit)
 import Data.Maybe (mapMaybe, catMaybes, isNothing, isJust, fromJust)
 import Data.Tuple (swap)
+import Data.Ord (comparing)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -556,3 +558,50 @@ day14 inp = maximum ocr - minimum ocr
     --polymer = foldl (\temp _ -> polym rules temp) template' [1 .. nSteps]
     -- occur = map length . group . sort $ polymer
     -- naive = maximum occur - minimum occur
+
+riskAt :: [[Int]] -> (Int,Int) -> Int
+riskAt g i =  g !! fst i !! snd i
+
+tile :: [[Int]] -> (Int, Int) -> Int
+tile grid (r,c) = t !! r' !! c'
+  where
+    gd = length grid
+    t = [take 5 . drop d . cycle $ [0 .. 8] | d <- [0 .. 4]]
+    r' = div r gd
+    c' = div c gd
+
+riskAt' :: [[Int]] -> (Int,Int) -> Int
+riskAt' g i = (cycle [ 1 .. 9 ]) !! (r + t - 1)
+  where 
+    t = tile g i
+    gd = length g
+    r' = cycle [ 0 .. (gd - 1) ] !! fst i
+    c' = cycle [ 0 .. (gd - 1) ] !! snd i
+    r = g !! r' !! c'
+
+chitonStep :: [[Int]] -> (Int, Int) -> Map.Map (Int,Int) Int -> Set.Set (Int,Int) -> Int
+chitonStep grid target stack visited
+    | idx == target = cost
+    | otherwise = chitonStep grid target stack' visited'
+  where
+    this = minimumBy (comparing snd) . Map.toList $ stack
+    cost = snd this
+    idx = fst this
+    --gd = length grid
+    gd = (*5) . length $ grid
+    (r,c) = idx
+    cross = filter (\(r',c') -> (r' >= 0) && (c' >= 0) && (r' < gd) && (c' < gd) 
+                             && Set.notMember (r',c') visited) 
+                   [ (r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1) ]
+    stack' = Map.unionWith min (Map.delete idx stack) . Map.fromList 
+           . map (\i -> (i, riskAt' grid i + cost)) $ cross
+    visited' = Set.insert idx visited
+
+day15 :: String -> Int
+day15 inp = path
+  where
+    grid = map (map digitToInt) . lines $ inp
+    s = (0,0)
+    -- t = (subtract 1 . length $ grid, subtract 1 . length . head $ grid)
+    t = (subtract 1 . (*5) . length $ grid, subtract 1 . (*5) . length . head $ grid)
+    path = chitonStep grid t (Map.fromList [(s, 0)]) Set.empty
