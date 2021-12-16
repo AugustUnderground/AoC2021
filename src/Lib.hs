@@ -624,31 +624,75 @@ toBin 'C' = "1100"
 toBin 'D' = "1101"
 toBin 'E' = "1110"
 toBin 'F' = "1111"
-toBin  _  = error "You screwed up day 16!"
+toBin  _  = "" -- error "You screwed up day 16!"
 
-data Packet = LengthOperator {typeID :: Int, version :: Int, subPackets :: [Packet]}
-            | CountOperator  {typeID :: Int, version :: Int, subPackets :: [Packet]}
+data Packet = LengthOperator {typeID :: Int, version :: Int, len :: Int, subPackets :: [Packet]}
+            | CountOperator  {typeID :: Int, version :: Int, cnt :: Int, subPackets :: [Packet]}
             | LiteralValue   {typeID :: Int, version :: Int, value :: Int}
     deriving (Eq, Show)
 
-trData :: String -> Int
-trData ('0':b1:b2:b3:b4:bs) = toDec [b1,b2,b3,b4] + trData bs
-trData ('1':b1:b2:b3:b4:bs) = toDec [b1,b2,b3,b4]
-trData          _           = 0
+trData' :: String -> String
+trData' ('1':b1:b2:b3:b4:bs) = [b1,b2,b3,b4] ++ trData' bs
+trData' ('0':b1:b2:b3:b4:bs) = [b1,b2,b3,b4]
+trData'          _           = ""
 
-mkPacket :: Int -> Int -> String -> Packet
-mkPacket v 4 d       = LiteralValue   4 v (trData d)
-mkPacket v t ('0':d) = LengthOperator t v 666
-mkPacket v t ('1':d) = CountOperator  t v 666
+trData :: String -> (Int, Int)
+trData d = (d', i')
+    where d'' = trData' d
+          d'  = toDec d''
+          i'  = round $ (realToFrac . length $ d'') / 4 * 5
 
-parsePacket :: String -> [Packet]
-parsePacket transmission = [mkPacket v t d]
+mkPacket :: String -> [Packet]
+mkPacket (v1:v2:v3:'1':'0':'0':d) = (LiteralValue 4 v d') 
+                                  : (mkPacket . drop i' $ d)
+    where (d', i') = trData d
+          v = toDec [v1,v2,v3]
+mkPacket (v1:v2:v3:t1:t2:t3:'0':d) = (LengthOperator t v l d') 
+                                   : (mkPacket . drop (15 + l) $ d)
+  where t = toDec [t1,t2,t3]
+        v = toDec [v1,v2,v3]
+        l = toDec . take 15 $ d
+        d' = mkPacket . take l . drop 15 $ d
+mkPacket (v1:v2:v3:t1:t2:t3:'1':d) = (CountOperator t v n d') 
+                                   : (drop n . mkPacket . drop 11 $ d)
+  where t = toDec [t1,t2,t3]
+        v = toDec [v1,v2,v3]
+        n = toDec . take 11 $ d
+        d' = take n . mkPacket . drop 11 $ d
+mkPacket _ = []
+
+sumVersions :: Packet -> Int
+sumVersions pkg | typeID pkg == 4 = version pkg
+                | otherwise = (version pkg) + (sum . map sumVersions . subPackets $ pkg)
+
+packFun :: Int -> ([Int] -> Int)
+packFun 0 = sum
+packFun 1 = product
+packFun 2 = minimum
+packFun 3 = maximum
+packFun 5 = \[a, b] -> if a > b then 1 else 0
+packFun 6 = \[a, b] -> if a < b then 1 else 0
+packFun 7 = \[a, b] -> if a == b then 1 else 0
+packFun _ = const 0
+
+processPacket :: Packet -> Int
+processPacket pkg | t == 4 = value pkg
+                  | otherwise = v
   where 
-    v = toDec . take 3 $ transmission
-    t = toDec . take 3 . drop 3 $ transmission
-    d = drop 6 transmission
+    t = typeID pkg
+    v = packFun t . map processPacket . subPackets $ pkg
+
+day16' :: [String] -> [Int]
+day16' inp = vv
+  where
+    ts = map (concatMap toBin) inp
+    pkgs = map mkPacket ts
+    vv = map (sum . map sumVersions) pkgs
 
 day16 :: String -> Int
-day16 inp = 666
+day16 inp = vals -- v
   where
-    transmission = concatMap toBin inp
+    t   = concatMap toBin inp
+    pkg = mkPacket t
+    v = sum . map sumVersions $ pkg
+    vals = sum . map processPacket $ pkg
