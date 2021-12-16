@@ -19,6 +19,7 @@ module Lib
     , day13
     , day14
     , day15
+    , day16
     ) where
 
 import Control.Applicative
@@ -605,3 +606,49 @@ day15 inp = path
     -- t = (subtract 1 . length $ grid, subtract 1 . length . head $ grid)
     t = (subtract 1 . (*5) . length $ grid, subtract 1 . (*5) . length . head $ grid)
     path = chitonStep grid t (Map.fromList [(s, 0)]) Set.empty
+
+toBin :: Char -> String
+toBin '0' = "0000"
+toBin '1' = "0001"
+toBin '2' = "0010"
+toBin '3' = "0011"
+toBin '4' = "0100"
+toBin '5' = "0101"
+toBin '6' = "0110"
+toBin '7' = "0111"
+toBin '8' = "1000"
+toBin '9' = "1001"
+toBin 'A' = "1010"
+toBin 'B' = "1011"
+toBin 'C' = "1100"
+toBin 'D' = "1101"
+toBin 'E' = "1110"
+toBin 'F' = "1111"
+toBin  _  = error "You screwed up day 16!"
+
+data Packet = LengthOperator {typeID :: Int, version :: Int, subPackets :: [Packet]}
+            | CountOperator  {typeID :: Int, version :: Int, subPackets :: [Packet]}
+            | LiteralValue   {typeID :: Int, version :: Int, value :: Int}
+    deriving (Eq, Show)
+
+trData :: String -> Int
+trData ('0':b1:b2:b3:b4:bs) = toDec [b1,b2,b3,b4] + trData bs
+trData ('1':b1:b2:b3:b4:bs) = toDec [b1,b2,b3,b4]
+trData          _           = 0
+
+mkPacket :: Int -> Int -> String -> Packet
+mkPacket v 4 d       = LiteralValue   4 v (trData d)
+mkPacket v t ('0':d) = LengthOperator t v 666
+mkPacket v t ('1':d) = CountOperator  t v 666
+
+parsePacket :: String -> [Packet]
+parsePacket transmission = [mkPacket v t d]
+  where 
+    v = toDec . take 3 $ transmission
+    t = toDec . take 3 . drop 3 $ transmission
+    d = drop 6 transmission
+
+day16 :: String -> Int
+day16 inp = 666
+  where
+    transmission = concatMap toBin inp
