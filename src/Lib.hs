@@ -696,3 +696,54 @@ day16 inp = vals -- v
     pkg = mkPacket t
     v = sum . map sumVersions $ pkg
     vals = sum . map processPacket $ pkg
+
+trajectoryStep :: Int -> Int -> Int -> Int -> [(Int, Int)]
+trajectoryStep x y vx vy = t : trajectoryStep x' y' vx' vy'
+  where
+    x' = x + vx
+    y' = y + vy
+    vx' = if vx >= 0 then max 0 (vx - 1) else min 0 (vx + 1)
+    vy' = vy - 1
+    t = (x', y')
+
+inRange :: (Int, Int) -> (Int, Int) -> (Int, Int) -> Bool
+inRange (xLo,xHi) (yLo,yHi) (x,y) = x' && y'
+  where
+    x' = abs x <= max (abs xLo) (abs xHi)
+    y' = y >= yLo
+
+hit :: (Int, Int) -> (Int, Int) -> (Int, Int) -> Bool
+hit xr yr (x,y) = (x >= fst xr) && (x <= snd xr) 
+                && (y >= fst yr) && (y <= snd yr)
+
+highest :: [(Int,Int)] -> Int
+highest = maximum . map snd 
+
+step :: (Int, Int) -> (Int, Int) -> Int -> Int -> Int
+step xr yr vx vy = hi
+  where
+    trj' = takeWhile (inRange xr yr) $ trajectoryStep 0 0 vx vy
+    hit' = any (hit xr yr) trj'
+    hi = if hit' then highest trj' else 0
+
+step' :: (Int, Int) -> (Int, Int) -> Int -> Int -> Maybe (Int, Int)
+step' xr yr vx vy = if hit' then Just (vx, vy) else Nothing
+  where
+    trj' = takeWhile (inRange xr yr) $ trajectoryStep 0 0 vx vy
+    hit' = any (hit xr yr) trj'
+
+day17 :: String -> Int
+day17 inp = ot
+  where
+    pos = map read . concatMap (splitOn "..") . concatMap (tail . splitOn "=") 
+        . splitOn "," . head . tail . splitOn ":" . head . lines $ inp :: [Int]
+    xRange = (pos !! 0, pos !! 1)
+    yRange = (pos !! 2, pos !! 3)
+    hiPoints = [step xRange yRange vx vy | vx <- [ 1 .. 1000 ], vy <- [1 .. 1000]]
+    hi = maximum hiPoints
+    vy' = fst yRange
+    vy'' = abs $ fst yRange
+    vx' = floor $ realToFrac (fst xRange) / 3
+    vx'' = snd xRange
+    ot = length . catMaybes $ [step' xRange yRange vx vy | vx <- [ 0 .. 1000 ], vy <- [vy' .. vy'']]
+    
