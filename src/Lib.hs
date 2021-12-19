@@ -20,10 +20,13 @@ module Lib
     , day14
     , day15
     , day16
+    , day17
+    , day18
     ) where
 
+-- import Debug.Trace
+
 import Control.Applicative
-import Debug.Trace
 import Data.List
 import Data.List.Split
 import Data.Char (digitToInt, intToDigit, isUpper, isLower, isSpace, isLetter, isDigit)
@@ -746,4 +749,107 @@ day17 inp = ot
     vx' = floor $ realToFrac (fst xRange) / 3
     vx'' = snd xRange
     ot = length . catMaybes $ [step' xRange yRange vx vy | vx <- [ 0 .. 1000 ], vy <- [vy' .. vy'']]
-    
+
+data SnailNumber = SnailPrim Int
+                 | SnailPair SnailNumber SnailNumber
+    deriving (Eq, Ord)
+
+instance Show SnailNumber where
+    show (SnailPrim n)   = show n
+    show (SnailPair x y) = "[" ++ show x ++ "," ++ show y ++ "]"
+
+toSnailNum :: String -> (SnailNumber, String)
+toSnailNum (n:sn) | n == '['  = (SnailPair x y, s)
+                  | otherwise = (SnailPrim (digitToInt n), sn)
+  where
+    (x, xRest) = toSnailNum sn
+    (y, yRest) = toSnailNum (tail xRest)
+    s          = tail yRest
+toSnailNum "" = (SnailPrim 0, "")
+
+toSnailNum' :: String -> SnailNumber
+toSnailNum' = fst . toSnailNum
+
+snailAdd :: SnailNumber -> SnailNumber -> SnailNumber
+snailAdd = SnailPair
+
+snailSplit :: SnailNumber -> (SnailNumber, Bool)
+snailSplit (SnailPair x y) | ls           = (SnailPair x' y , True)
+                           | not ls && rs = (SnailPair x  y', True)
+                           | otherwise    = (SnailPair x  y , False)
+  where 
+    (x', ls) = snailSplit x
+    (y', rs) = snailSplit y
+snailSplit (SnailPrim x)   | x < 10    = (SnailPrim x, False)
+                           | otherwise = (SnailPair x' y', True)
+  where
+    z = realToFrac x / 2
+    x' = SnailPrim (floor z)
+    y' = SnailPrim (ceiling z)
+
+snailLeft :: Int -> SnailNumber -> SnailNumber
+snailLeft l (SnailPair (SnailPrim x) y) = SnailPair (SnailPrim (x + l)) y
+snailLeft l (SnailPair            x  y) = SnailPair (snailLeft l x) y
+snailLeft _ _                           = error "You screwed up day 18!"
+
+snailRight :: Int -> SnailNumber -> SnailNumber
+snailRight r (SnailPair x (SnailPrim y)) = SnailPair x (SnailPrim (y + r))
+snailRight r (SnailPair x            y)  = SnailPair x (snailRight r y)
+snailRight _ _                           = error "You screwed up day 18!"
+
+snailExplode' :: Int -> SnailNumber -> (SnailNumber, Int, Int, Bool)
+snailExplode' d sp@(SnailPair (SnailPrim x) (SnailPrim y)) | d >= 4 = (SnailPrim 0, x, y, True)
+                                                           | otherwise = (sp, 0, 0, False)
+snailExplode' d (SnailPair (SnailPrim x) y) = (sn', 0, ry, ey)
+  where (y', ly, ry, ey) = snailExplode' (d + 1) y
+        sn' = SnailPair (SnailPrim (x + ly)) y'
+snailExplode' d (SnailPair x (SnailPrim y)) = (sn', lx, 0, ex)
+  where (x', lx, rx, ex) = snailExplode' (d + 1) x
+        sn' = SnailPair x' (SnailPrim (y + rx))
+snailExplode' d (SnailPair x y) | ex           = (SnailPair x' y'', lx, 0, True) 
+                                | not ex && ey = (SnailPair x'' y', 0, ry, True)
+                                | otherwise    = (SnailPair x y, 0, 0, False)
+  where (x', lx, rx, ex) = snailExplode' (d + 1) x
+        (y', ly, ry, ey) = snailExplode' (d + 1) y
+        x'' = snailRight ly x
+        y'' = snailLeft rx y
+snailExplode' _ _ = error "You screwed up day 18!"
+
+snailExplode :: SnailNumber -> (SnailNumber, Bool)
+snailExplode sn = (sn', ex)
+  where
+    (sn', _, _, ex) = snailExplode' 0 sn
+
+snailStep :: SnailNumber -> (SnailNumber, Bool)
+snailStep sn | not sex && not spl = (sn, False)
+             | sex                = (ex, True)
+             | otherwise          = (sp, True)
+  where
+    (ex, sex) = snailExplode sn
+    (sp, spl) = snailSplit sn
+
+snailReduce :: SnailNumber -> SnailNumber
+snailReduce sn = fst . head . dropWhile snd $ iterate step (sn, True)
+  where
+    step (n, _) = snailStep n
+
+snailMagnitude :: SnailNumber -> Int
+snailMagnitude (SnailPair (SnailPrim x) (SnailPrim y)) = 3 * x + 2 * y
+snailMagnitude (SnailPair (SnailPrim x)            y)  = 3 * x + 2 * y'
+  where y' = snailMagnitude y
+snailMagnitude (SnailPair            x  (SnailPrim y)) = 3 * x' + 2 * y
+  where x' = snailMagnitude x
+snailMagnitude (SnailPair            x             y)  = 3 * x' + 2 * y'
+  where x' = snailMagnitude x
+        y' = snailMagnitude y
+snailMagnitude _ = error "You screwed up day 18!"
+
+day18 :: String -> Int
+day18 inp = maxMag
+  where
+    snailNums = map toSnailNum' . lines $ inp
+    sp = \x y -> snailReduce $ snailAdd x y
+    snailSum = foldl1 sp snailNums
+    snailMag = snailMagnitude snailSum
+    maxMag = maximum [ snailMagnitude . snailReduce $ snailAdd x y 
+                     | x <- snailNums, y <- snailNums, x /= y]
