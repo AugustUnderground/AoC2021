@@ -22,6 +22,7 @@ module Lib
     , day16
     , day17
     , day18
+    , day19
     ) where
 
 -- import Debug.Trace
@@ -853,3 +854,63 @@ day18 inp = maxMag
     snailMag = snailMagnitude snailSum
     maxMag = maximum [ snailMagnitude . snailReduce $ snailAdd x y 
                      | x <- snailNums, y <- snailNums, x /= y]
+
+distance :: [Int] -> [Int] -> [Int]
+distance [x1,y1,z1] [x2,y2,z2] = [x', y', z']
+  where
+    x' = abs (x1 - x2)
+    y' = abs (y1 - y2)
+    z' = abs (z1 - z2)
+distance _ _ = error "You screwed up day 19!"
+
+rotations' :: [Int] -> [[Int]]
+rotations' [x,y,z] = [ [ x,  y, z]
+                     , [-y,  x, z]
+                     , [-x, -y, z]
+                     , [ y, -x, z] ]
+rotations' _       = error "You screwed up day 19!"
+
+orientations' :: [Int] -> [[Int]]
+orientations' [x,y,z] = [ [ x,  y,  z]
+                        , [ x,  z, -y]
+                        , [ x, -y, -z]
+                        , [ x, -z,  y]
+                        , [-z,  y,  x]
+                        , [ z,  y, -x] ]
+orientations' _       = error "You screwed up day 19!"
+
+orientations :: [Int] -> Map.Map Int [Int]
+orientations = Map.fromList . zip [ 0 .. ] . concatMap rotations' . orientations'
+
+mapScanners :: Int -> [String] -> Map.Map Int (Set.Set [Int]) 
+            -> Map.Map Int (Set.Set [Int])
+mapScanners _ [] m     = m
+mapScanners n (_:sc) m = mapScanners n' s' (Map.insert n c m)
+  where
+    n' = n + 1
+    c' = map (map read . splitOn ",") . filter (not . null) 
+       . takeWhile (\s -> s /= "--- scanner " ++ show n' ++ " ---") 
+       $ sc :: [[Int]]
+    s' = dropWhile (\s -> s /= "--- scanner " ++ show n' ++ " ---") sc
+    c = Set.fromList c'
+
+overlap' :: [[Int]] -> [[Int]] -> [[Int]]
+overlap' fs os = [[666]]
+  where
+    foo = [ distance f o | f <- fs, o <- os ]
+
+overlap :: Map.Map Int (Map.Map Int [[Int]]) -> [Int]
+overlap scanners = [666]
+  where 
+    fixed = fromJust $ Map.lookup 0 scanners >>= Map.lookup 0
+    scanners' = Map.filterWithKey (\k _ -> k /= 0) scanners
+    foo = Map.map (Map.map (overlap' fixed)) scanners'
+
+day19 :: String -> Int
+day19 inp = 666
+  where
+    sc = lines inp
+    scanners = mapScanners 0 (lines inp) Map.empty
+
+    o0 = Map.lookup 0 scanners >>= Map.lookup 0
+
