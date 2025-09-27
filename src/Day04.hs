@@ -3,11 +3,11 @@
 
 module Day04 (solve) where
 
-import Data.List.Split (splitOn)
-import Data.Map (Map, (!?))
-import qualified Data.Map as M
-import Data.Set (Set)
-import qualified Data.Set as S
+import           Data.List.Split      (splitOn)
+import           Data.Map             (Map, (!?))
+import qualified Data.Map        as M
+import           Data.Set             (Set)
+import qualified Data.Set        as S
 
 type Board = Map Int (Int,Int)
 type Marks = Set (Int, Int)
@@ -77,7 +77,7 @@ solve = do
     let nums   = map (read @Int) . splitOn "," $ head input
         boards = parse $ drop 2 input
         marks  = replicate (length boards) S.empty
-    let silver = bingo  nums boards marks
+        silver = bingo  nums boards marks
         gold   = bingo' nums boards marks
     putStrLn $ "\tSilver: " ++ show silver
           ++ "\n\tGold:   " ++ show gold

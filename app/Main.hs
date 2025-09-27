@@ -1,9 +1,6 @@
 module Main where
 
-import Day04 (solve)
-
---main :: IO ()
---main = readFile "./resource/day18.txt" >>= print . day18
+import Day05 (solve)
 
 main :: IO ()
 main = solve
