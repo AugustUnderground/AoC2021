@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Day01 (solve) where
