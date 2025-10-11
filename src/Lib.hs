@@ -914,3 +914,6 @@ module Lib where
 -- 
 --     o0 = Map.lookup 0 scanners >>= Map.lookup 0
 -- 
+--import System.IO.Unsafe (unsafePerformIO)
+--debug :: Show a => a -> a
+--debug v = unsafePerformIO (print v >> pure v)
