@@ -23,6 +23,7 @@ dependencies:
 - base >= 4.9 && < 5
 - split
 - containers
+- regex-tdfa
 
 library:
   source-dirs: src

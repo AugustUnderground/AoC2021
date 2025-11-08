@@ -1,5 +1,4 @@
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -fno-warn-incomplete-uni-patterns #-}
 
 module Day12 (solve) where
 
