@@ -51,7 +51,7 @@ rot = [ \(x,y,z) -> (a*x + b*y + c*z, d*x + e*y + f*z, g*x + h*y + i*z)
 olp :: Int -> Set Coord -> Set Coord -> Maybe (Transform, Coord, Set Coord)
 olp n c c' = listToMaybe [ (r, s, t)
                          | r <- rot, p <- S.toList c , q <- S.toList c'
-                         , let s = p <-> (r q)
+                         , let s = p <-> r q
                          , let t = S.map ((<+> s) . r) c'
                          , (>=n) . S.size $ S.intersection c t ]
 
