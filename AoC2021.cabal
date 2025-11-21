@@ -44,7 +44,6 @@ library
       Day17
       Day18
       Day19
-      Lib
   other-modules:
       Paths_AoC2021
   hs-source-dirs:
