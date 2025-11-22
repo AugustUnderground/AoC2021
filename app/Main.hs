@@ -1,6 +1,6 @@
 module Main where
 
-import Day20 (solve)
+import Day21 (solve)
 
 main :: IO ()
 main = solve
