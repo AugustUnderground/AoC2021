@@ -44,6 +44,7 @@ library
       Day17
       Day18
       Day19
+      Day20
   other-modules:
       Paths_AoC2021
   hs-source-dirs:
@@ -51,6 +52,7 @@ library
   build-depends:
       base >=4.9 && <5
     , containers
+    , mtl
     , regex-tdfa
     , split
   default-language: Haskell2010
@@ -66,6 +68,7 @@ executable AoC2021-exe
       AoC2021
     , base >=4.9 && <5
     , containers
+    , mtl
     , regex-tdfa
     , split
   default-language: Haskell2010
@@ -82,6 +85,7 @@ test-suite AoC2021-test
       AoC2021
     , base >=4.9 && <5
     , containers
+    , mtl
     , regex-tdfa
     , split
   default-language: Haskell2010

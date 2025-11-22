@@ -21,6 +21,7 @@ description:         Please see the README on GitHub at <https://github.com/augu
 
 dependencies:
 - base >= 4.9 && < 5
+- mtl
 - split
 - containers
 - regex-tdfa
